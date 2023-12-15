@@ -6,22 +6,32 @@ using System.Threading.Tasks;
 
 public class InstanceMonitor
 {
-    private readonly double cpuThreshold;
-    private readonly double memoryThreshold;
-    private readonly HttpClient httpClient;
-    private readonly string alertUrl = "https://placeholder/start";
+    private readonly double _cpuThreshold;
+    private readonly double _memoryThreshold;
+    private readonly HttpClient _httpClient;
+    private readonly string _raiseEndpoint = string.Empty;
+    private readonly string _reduceEndpoint = string.Empty;
+    private readonly int _exceedThresholdCount = 2;
+    private readonly int _cyclesAtMaxStateBeforeReducing = 4;
+    private readonly int _currentExceedThresholdCount = 0;
+    private readonly int _checkInMinutes = 15;
 
-    public InstanceMonitor(double cpuThresholdPercentage, double memoryThresholdMB)
+    public InstanceMonitor(double cpuThresholdPercentage, double memoryThresholdMB, int exceedThresholdCount, int checkInMinutes, int cyclesAtMaxStateBeforeReducing, string startEndPoint, string endEndPoint)
     {
-        this.cpuThreshold = cpuThresholdPercentage;
-        this.memoryThreshold = memoryThresholdMB;
-        this.httpClient = new HttpClient();
+        this._cpuThreshold = cpuThresholdPercentage;
+        this._exceedThresholdCount = exceedThresholdCount;
+        this._cyclesAtMaxStateBeforeReducing = cyclesAtMaxStateBeforeReducing;
+        this._checkInMinutes = checkInMinutes;
+        this._memoryThreshold = memoryThresholdMB;
+        this._raiseEndpoint = startEndPoint;
+        this._reduceEndpoint = endEndPoint;
+        this._httpClient = new HttpClient();
     }
 
     public async Task StartMonitoringAsync(CancellationToken cancellationToken)
     {
-        var exceedThresholdCount = 2;
         var currentExceedThresholdCount = 0;
+        var currentCyclesBeforeReduce = 0;
         while (!cancellationToken.IsCancellationRequested)
         {
             double cpuUsage, memoryUsage;
@@ -31,23 +41,52 @@ public class InstanceMonitor
             Console.WriteLine($"CPU Usage: {cpuUsage}%");
             Console.WriteLine($"Memory Usage: {memoryUsage} MB");
 
-            if (cpuUsage > cpuThreshold || memoryUsage > memoryThreshold)
+            if (cpuUsage > _cpuThreshold || memoryUsage > _memoryThreshold)
             {
-                //await httpClient.GetAsync(alertUrl);
-                currentExceedThresholdCount++;
+                if (currentExceedThresholdCount < _exceedThresholdCount)
+                {
+                    currentExceedThresholdCount++;
+                    Console.WriteLine($"({currentExceedThresholdCount}) warnings");
+                    if (currentExceedThresholdCount == _exceedThresholdCount)
+                    {
+                        await _httpClient.GetAsync(_raiseEndpoint);
+                        Console.WriteLine($"Alert sent due to high resource usage. ({currentExceedThresholdCount}) times");
+                        currentCyclesBeforeReduce = _cyclesAtMaxStateBeforeReducing;
+                    }
+                } else if (currentExceedThresholdCount == _exceedThresholdCount)
+                {
+                    Console.WriteLine($"In exceeded resource state");
+                }
             }
-            else
+            else if(currentExceedThresholdCount > 0)
             {
-                currentExceedThresholdCount--;
-                Console.WriteLine("Reducing");
+                if (currentExceedThresholdCount == _exceedThresholdCount)
+                {
+                    if (currentCyclesBeforeReduce > 0)
+                    {
+                        currentCyclesBeforeReduce--;
+                        Console.WriteLine($"In exceeded resource state: {_cyclesAtMaxStateBeforeReducing - currentCyclesBeforeReduce} of {_cyclesAtMaxStateBeforeReducing}");
+                    }
+                    else
+                    {
+                        currentExceedThresholdCount = 0;
+                        await _httpClient.GetAsync(_reduceEndpoint);
+                        Console.WriteLine($"In exceeded resource state: Normalized");
+                    }
+                }
+                else
+                {
+                    currentExceedThresholdCount--;
+                    Console.WriteLine("Reducing");
+                    if (currentExceedThresholdCount == 0)
+                    {
+                        Console.WriteLine("Back to normal");
+                    }
+                }
             }
 
-            if (currentExceedThresholdCount >= exceedThresholdCount)
-            {
-                Console.WriteLine("Alert sent due to high resource usage.");
-            }
-
-            await Task.Delay(TimeSpan.FromSeconds(1), cancellationToken); // Check every 30 seconds
+            await Task.Delay(TimeSpan.FromMinutes(_checkInMinutes), cancellationToken); // Check every 30 seconds
+            //await Task.Delay(TimeSpan.FromSeconds(3), cancellationToken); // Check every 30 seconds
         }
     }
 

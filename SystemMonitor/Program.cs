@@ -1,7 +1,10 @@
-﻿var processorThreshold = 70.0;
-var memoryThreshold = 28000.0;
+﻿var processorThreshold = 30.0;
+var memoryThreshold = 17000.0;
 var checkInMinutes = 15;
 var maxThreshholdCount = 2;
+var cyclesAtMaxState = 4;
+var startEndPoint = string.Empty;
+var endEndPoint = string.Empty;
 
 foreach (var arg in args)
 {
@@ -15,10 +18,24 @@ foreach (var arg in args)
     } else if (arg.StartsWith("--check-in-minutes="))
     {
         checkInMinutes = int.Parse(arg.Substring("--check-in-minutes=".Length));
-    } else if (arg.StartsWith("--max-exceeds="))
+    }
+    else if (arg.StartsWith("--cycles-at-max="))
+    {
+        cyclesAtMaxState = int.Parse(arg.Substring("--cycles-at-max=".Length));
+    }
+    else if (arg.StartsWith("--max-exceeds="))
     {
         maxThreshholdCount = int.Parse(arg.Substring("--max-exceeds=".Length));
-    } else if (arg.StartsWith("--help"))
+    }
+    else if (arg.StartsWith("--start-endpoint="))
+    {
+        startEndPoint = arg.Substring("--start-endpoint=".Length);
+    }
+    else if (arg.StartsWith("--end-endpoint="))
+    {
+        endEndPoint = arg.Substring("--end-endpoint=".Length);
+    }
+    else if (arg.StartsWith("--help"))
     {
         Console.WriteLine();
         Console.WriteLine("Description: ");
@@ -32,13 +49,16 @@ foreach (var arg in args)
         Console.WriteLine($"   --memory-threshold\t\tThe memory utilization MB threshold (Default = {memoryThreshold})");
         Console.WriteLine($"   --check-in-minutes\t\tThe number of minutes to wait between checks (Default = {checkInMinutes})");
         Console.WriteLine($"   --max-exceeds\t\tThe number of times the threshold must be exceeded before an alert is sent (Default = {maxThreshholdCount})");
+        Console.WriteLine($"   --cycles-at-max\t\tThe number of times the check should run before reducing (Default = {cyclesAtMaxState})");
+        Console.WriteLine($"   --start-endpoint\t\tThe endpoint to call when at max state (Default = {startEndPoint})");
+        Console.WriteLine($"   --end-endpoint\t\tThe endpoint to call when max state resets (Default = {endEndPoint})");
         Console.WriteLine();
         Console.WriteLine();
-
         return;
     }
 }
-//var systemMonitor = new InstanceMonitor(70.0, 28000);
-//var cancellationTokenSource = new CancellationTokenSource();
+Console.WriteLine("Monitoring ...");
+var systemMonitor = new InstanceMonitor(processorThreshold, memoryThreshold, maxThreshholdCount, checkInMinutes, cyclesAtMaxState, startEndPoint, endEndPoint);
+var cancellationTokenSource = new CancellationTokenSource();
 
-//await systemMonitor.StartMonitoringAsync(cancellationTokenSource.Token);
+await systemMonitor.StartMonitoringAsync(cancellationTokenSource.Token);
