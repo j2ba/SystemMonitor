@@ -49,12 +49,13 @@ public class InstanceMonitor
                     Console.WriteLine($"({currentExceedThresholdCount}) warnings");
                     if (currentExceedThresholdCount == _exceedThresholdCount)
                     {
-                        await _httpClient.GetAsync(_raiseEndpoint);
+                        var response = await _httpClient.PostAsync(_raiseEndpoint, null);
                         Console.WriteLine($"Alert sent due to high resource usage. ({currentExceedThresholdCount}) times");
                         currentCyclesBeforeReduce = _cyclesAtMaxStateBeforeReducing;
                     }
                 } else if (currentExceedThresholdCount == _exceedThresholdCount)
                 {
+                    currentCyclesBeforeReduce = _cyclesAtMaxStateBeforeReducing;
                     Console.WriteLine($"In exceeded resource state");
                 }
             }
@@ -70,7 +71,7 @@ public class InstanceMonitor
                     else
                     {
                         currentExceedThresholdCount = 0;
-                        await _httpClient.GetAsync(_reduceEndpoint);
+                        var response = await _httpClient.PostAsync(_reduceEndpoint, null);
                         Console.WriteLine($"In exceeded resource state: Normalized");
                     }
                 }
@@ -86,7 +87,7 @@ public class InstanceMonitor
             }
 
             await Task.Delay(TimeSpan.FromMinutes(_checkInMinutes), cancellationToken); // Check every 30 seconds
-            //await Task.Delay(TimeSpan.FromSeconds(3), cancellationToken); // Check every 30 seconds
+            //await Task.Delay(TimeSpan.FromSeconds(5), cancellationToken); // Check every 30 seconds
         }
     }
 
@@ -101,7 +102,7 @@ public class InstanceMonitor
             cpuUsage = cpuCounter.NextValue();
 
             memoryUsage = ramCounter.NextValue();
-            var totalMemory = 32768;// / 1024 / 1024;
+            var totalMemory = 8192;// / 1024 / 1024;
             memoryUsage = totalMemory - memoryUsage;
         }
     }

@@ -1,10 +1,12 @@
-﻿var processorThreshold = 30.0;
-var memoryThreshold = 17000.0;
+﻿var processorThreshold = 75.0;
+var memoryThreshold = 6000.00;
 var checkInMinutes = 15;
 var maxThreshholdCount = 2;
 var cyclesAtMaxState = 4;
 var startEndPoint = string.Empty;
 var endEndPoint = string.Empty;
+//var startEndPoint = "https://prod-60.eastus.logic.azure.com:443/workflows/5f4a2351132641039efa93977ed7f7f4/triggers/manual/paths/invoke?api-version=2016-10-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=wG3JBBDgv9eMi_ueIVHFdgeERgzDwndKGWq7pkEn-3o";
+//var endEndPoint = "https://prod-82.eastus.logic.azure.com:443/workflows/e36f539610cf4586986a0ea9f468fb27/triggers/manual/paths/invoke?api-version=2016-10-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=EfQq1WiHJTKGDj5r4HtSK1anthIioBwPjGZuISR7kug";
 
 foreach (var arg in args)
 {
@@ -57,7 +59,9 @@ foreach (var arg in args)
         return;
     }
 }
-Console.WriteLine("Monitoring ...");
+
+Console.Clear();
+Console.WriteLine("Monitor Started ...");
 var systemMonitor = new InstanceMonitor(processorThreshold, memoryThreshold, maxThreshholdCount, checkInMinutes, cyclesAtMaxState, startEndPoint, endEndPoint);
 var cancellationTokenSource = new CancellationTokenSource();
 
